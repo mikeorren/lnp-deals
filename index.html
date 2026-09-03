@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Lancaster Deals · Always Lancaster</title>
+<meta name="description" content="Search this week's grocery and store deals across Lancaster County and build a shopping list by store and department. From Always Lancaster / LancasterOnline."/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--green:#4C902F;--green-d:#3a6f24;--tan:#E5E0DE;--ink:#20281a;--muted:#6b7280;--card:#fff;--bg:#f6f5f3;--line:#e3e0dd;--accent:#c8531b}
+*{box-sizing:border-box}
+body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+h1,h2,h3,.oswald{font-family:Oswald,Impact,sans-serif;letter-spacing:.4px}
+a{color:var(--green-d)}
+header.top{background:var(--green);color:#fff;padding:12px 18px;position:sticky;top:0;z-index:30;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.top-row{display:flex;align-items:center;gap:14px;max-width:1220px;margin:0 auto;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column}
+.brand .title{font-size:26px;font-weight:700;text-transform:uppercase;line-height:1}
+.brand .sub{font-size:12px;opacity:.92;font-weight:500;margin-top:2px}
+.spacer{flex:1}
+.updated{font-size:11.5px;text-align:right;opacity:.95;line-height:1.35}
+.listbtn{background:#fff;color:var(--green-d);border:none;border-radius:24px;padding:10px 18px;font-weight:700;font-family:Oswald;font-size:15px;text-transform:uppercase;cursor:pointer;display:flex;gap:8px;align-items:center}
+.listbtn .badge{background:var(--accent);color:#fff;border-radius:12px;padding:1px 9px;font-size:13px;min-width:20px;text-align:center}
+.toolbar{background:var(--tan);border-bottom:1px solid var(--line);padding:11px 18px;position:sticky;top:62px;z-index:20}
+.toolrow{max-width:1220px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.toolrow input[type=search],.toolrow select{padding:9px 12px;border:1px solid #cfc9c4;border-radius:8px;font-size:14px;background:#fff;font-family:inherit;color:var(--ink)}
+.toolrow input[type=search]{flex:1;min-width:190px}
+.chk{font-size:13px;display:flex;gap:5px;align-items:center;white-space:nowrap}
+.count{font-size:13px;color:#5a5450;margin-left:auto;font-weight:600}
+main{max-width:1220px;margin:16px auto;padding:0 18px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:box-shadow .15s}
+.card:hover{box-shadow:0 4px 14px rgba(0,0,0,.09)}
+.thumb{height:132px;background:var(--tan);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.thumb img{max-height:132px;max-width:100%;object-fit:contain}
+.thumb .ph{font-family:Oswald;color:#b7afa8;font-size:13px;text-transform:uppercase;padding:0 10px;text-align:center}
+.cbody{padding:10px 12px;display:flex;flex-direction:column;gap:5px;flex:1}
+.store{font-family:Oswald;font-size:12px;text-transform:uppercase;color:var(--green-d);font-weight:600}
+.iname{font-size:14px;font-weight:600;line-height:1.28}
+.brandline{font-size:12px;color:var(--muted)}
+.price{font-family:Oswald;color:var(--green);font-size:23px;font-weight:700;line-height:1.1}
+.unit{font-family:Oswald;font-size:13px;color:#8a5a2b;font-weight:600;letter-spacing:.2px;margin-top:-2px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.tag{background:var(--tan);color:#5a5450;font-size:11px;padding:2px 8px;border-radius:10px}
+.tag.soon{background:#fbe3d5;color:var(--accent);font-weight:600}
+.addbtn{margin-top:auto;border:1px solid var(--green);background:#fff;color:var(--green-d);font-family:Oswald;text-transform:uppercase;font-weight:600;padding:8px;border-radius:8px;cursor:pointer;font-size:14px}
+.addbtn.added{background:var(--green);color:#fff}
+.loadmore{display:block;margin:22px auto;padding:12px 28px;font-family:Oswald;text-transform:uppercase;background:var(--green);color:#fff;border:none;border-radius:24px;font-size:15px;cursor:pointer}
+.empty{color:var(--muted);text-align:center;padding:46px 10px}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:40;display:none}
+.overlay.show{display:block}
+.drawer{position:fixed;top:0;right:0;height:100%;width:430px;max-width:93vw;background:#fff;box-shadow:-4px 0 22px rgba(0,0,0,.22);transform:translateX(100%);transition:transform .25s;z-index:50;display:flex;flex-direction:column}
+.drawer.open{transform:none}
+.dhead{background:var(--green);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px}
+.dhead h2{margin:0;font-size:20px;text-transform:uppercase}
+.dhead .close{margin-left:auto;background:transparent;border:none;color:#fff;font-size:26px;cursor:pointer;line-height:1}
+.groupToggle{display:flex;padding:10px 16px 4px}
+.groupToggle button{flex:1;padding:8px;border:1px solid var(--green);background:#fff;color:var(--green-d);font-family:Oswald;text-transform:uppercase;cursor:pointer}
+.groupToggle button.active{background:var(--green);color:#fff}
+.groupToggle button:first-child{border-radius:8px 0 0 8px}
+.groupToggle button:last-child{border-radius:0 8px 8px 0;border-left:none}
+.hint{font-size:12px;color:var(--muted);padding:2px 16px 6px}
+.dbody{flex:1;overflow:auto;padding:4px 16px}
+.groupHdr{font-family:Oswald;text-transform:uppercase;color:var(--green-d);border-bottom:2px solid var(--tan);margin:14px 0 4px;padding-bottom:3px;font-size:15px;display:flex;justify-content:space-between;gap:10px}
+.li{display:flex;gap:9px;align-items:flex-start;padding:7px 0;border-bottom:1px dashed var(--line)}
+.li input{margin-top:3px}
+.li .info{flex:1}
+.li .nm{font-size:14px;line-height:1.25}
+.li .meta{font-size:12px;color:var(--muted);margin-top:1px}
+.li.done .nm{text-decoration:line-through;color:#a9a29d}
+.li .rm{background:none;border:none;color:#c0392b;cursor:pointer;font-size:18px;line-height:1}
+.dfoot{border-top:1px solid var(--line);padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.dfoot .total{font-family:Oswald;font-size:18px;color:var(--green-d);margin-right:auto}
+.dfoot button{font-family:Oswald;text-transform:uppercase;border-radius:8px;padding:9px 14px;border:1px solid var(--green);cursor:pointer;background:#fff;color:var(--green-d);font-size:13px}
+.dfoot button.primary{background:var(--green);color:#fff;border:none}
+footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--muted);font-size:12px;border-top:1px solid var(--line)}
+@media(max-width:640px){.brand .title{font-size:20px}.toolbar{top:56px}.updated{display:none}}
+@media print{
+  header.top,.toolbar,main,.overlay,footer{display:none!important}
+  .drawer{position:static;transform:none;width:100%;max-width:100%;box-shadow:none;height:auto}
+  .dhead .close,.groupToggle,.hint,.dfoot,.li .rm,.li input{display:none!important}
+  .li.done .nm{text-decoration:line-through}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-row">
+    <div class="brand">
+      <span class="title">Lancaster Deals</span>
+      <span class="sub">This week's store deals across Lancaster County · Always Lancaster</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="updated" id="updated"></div>
+    <button class="listbtn" id="openList">My List <span class="badge" id="listCount">0</span></button>
+  </div>
+</header>
+<div class="toolbar">
+  <div class="toolrow">
+    <input type="search" id="q" placeholder="Search items or brands  (e.g. chicken, coffee, Tide)" autocomplete="off"/>
+    <select id="storeSel"><option value="">All stores</option></select>
+    <select id="deptSel"><option value="">All departments</option></select>
+    <select id="sortSel">
+      <option value="auto">Smart sort (best value on searches)</option>
+      <option value="value">Best value (per oz / per item)</option>
+      <option value="price_asc">Price: low to high</option>
+      <option value="price_desc">Price: high to low</option>
+      <option value="store">Store A-Z</option>
+      <option value="dept">Department</option>
+      <option value="soon">Ending soonest</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="soonOnly"/> Ending in 2 days</label>
+    <span class="count" id="count"></span>
+  </div>
+</div>
+<main>
+  <div class="grid" id="grid"></div>
+  <button class="loadmore" id="loadMore" style="display:none">Load more deals</button>
+  <div class="empty" id="noneMsg" style="display:none">No deals match your search. Try clearing a filter.</div>
+  <div class="empty" id="loadingMsg">Loading this week's deals…</div>
+</main>
+<div class="overlay" id="overlay"></div>
+<aside class="drawer" id="drawer" aria-label="My grocery list">
+  <div class="dhead">
+    <h2>My List</h2>
+    <button class="close" id="closeList" title="Close">&times;</button>
+  </div>
+  <div class="groupToggle">
+    <button data-group="s" class="active">By Store</button>
+    <button data-group="d">By Department</button>
+  </div>
+  <div class="hint">Check items off as you shop. Your list is saved on this device.</div>
+  <div class="dbody" id="listBody"></div>
+  <div class="dfoot">
+    <span class="total" id="listTotal">$0.00</span>
+    <button id="copyList">Copy</button>
+    <button id="printList" class="primary">Print</button>
+    <button id="clearList">Clear</button>
+  </div>
+</aside>
+<footer>
+  <strong>Lancaster Deals</strong> is a project of Always Lancaster / LancasterOnline. Prices and offers are pulled from participating retailers' weekly circulars and are provided for convenience only &mdash; always confirm price, size, and dates in-store. Per-unit prices are estimated from item sizes and shown only where a size could be read; use them as a guide. Deals data via Flipp. Updated weekly on Wednesday mornings when new flyers post.
+</footer>
+<script>
+const LS='lancasterDeals_v1';
+let DEALS=[],META={},sel={},groupBy='s',shown=0,PAGE=60,filtered=[];
+const $=s=>document.querySelector(s);
+const keyOf=d=>d.s+'|'+d.i+'|'+d.p;
+const esc=s=>(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function loadSel(){try{sel=JSON.parse(localStorage.getItem(LS))||{}}catch(e){sel={}}}
+function saveSel(){localStorage.setItem(LS,JSON.stringify(sel))}
+function daysLeft(vt){if(!vt)return null;const t=new Date();t.setHours(0,0,0,0);const e=new Date(vt+'T00:00:00');return Math.round((e-t)/86400000);}
+function daysTxt(n){if(n==null)return'';if(n<0)return'expired';if(n===0)return'ends today';if(n===1)return'ends tomorrow';return n+' days left';}
+function fmtDate(iso){if(!iso)return'';const d=new Date(iso+'T00:00:00');return d.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});}
+
+// --- Unit-price engine: read a size from the item name, normalize to per-oz or per-item ---
+function parseUnit(d){
+  if(d._u!==undefined)return d._u;
+  const s=' '+String(d.i||'').toLowerCase().replace(/[®™]/g,' ')+' ';
+  // Ambiguous multi-product listings ("A ... or B ...") can't get one honest unit price -> skip.
+  if(/ or |•|;| vs /.test(s))return d._u=null;
+  const ozRe=/(\d+(?:\.\d+)?)\s*(?:-\s*(\d+(?:\.\d+)?)\s*)?(fl\.?\s*oz|ounces?|oz|pounds?|lbs?|lb|gallons?|gal|quarts?|qt|pints?|pt|liters?|litres?|kilograms?|kg|milliliters?|ml|grams?|l|g)\b/;
+  const ctRe=/(\d+)\s*(?:-\s*(\d+)\s*)?(counts?|ct|cd|packs?|pk|loads?|rolls?|pods?|pairs?|bars?|tablets?|capsules?|caps?|wipes?|sheets?|cans?|bottles?|boxes?|pieces?|pcs?)\b/;
+  const mid=m=>{const a=parseFloat(m[1]),b=m[2]?parseFloat(m[2]):null;return b?(a+b)/2:a;};
+  let m;
+  if((m=s.match(ozRe))){
+    const u=m[3].replace(/\./g,'').replace(/\s+/g,'');
+    const f={ounce:1,ounces:1,oz:1,floz:1,pound:16,pounds:16,lb:16,lbs:16,gallon:128,gallons:128,gal:128,quart:32,quarts:32,qt:32,pint:16,pints:16,pt:16,liter:33.814,liters:33.814,litre:33.814,litres:33.814,l:33.814,kilogram:35.274,kilograms:35.274,kg:35.274,milliliter:0.033814,milliliters:0.033814,ml:0.033814,gram:0.035274,grams:0.035274,g:0.035274};
+    const q=mid(m)*(f[u]||1);
+    if(q>0)return d._u={fam:'oz',up:d.p/q,label:'/oz'};
+  }
+  if((m=s.match(ctRe))){
+    const q=mid(m);
+    if(q>0){
+      const n=m[3].replace(/s$/,'');
+      const map={count:'ct',ct:'ct',cd:'ct',pk:'pk',pack:'pk',load:'load',roll:'roll',pod:'pod',pair:'pair',bar:'bar',tablet:'tab',capsule:'cap',cap:'cap',wipe:'wipe',sheet:'sheet',can:'can',bottle:'bottle',box:'box',piece:'pc',pc:'pc'};
+      return d._u={fam:'count',up:d.p/q,label:'/'+(map[n]||n)};
+    }
+  }
+  // Priced by weight via the retailer's own unit field (e.g. produce/meat at $x/lb)
+  const uu=String(d.u||'').toLowerCase();
+  if(/\blb\b|pound/.test(uu))return d._u={fam:'oz',up:d.p/16,label:'/oz'};
+  return d._u=null;
+}
+function fmtUP(u){const v=u.up;const s=v>=0.1?v.toFixed(2):v.toFixed(3);return '$'+s+u.label;}
+
+async function init(){
+  loadSel();
+  try{
+    const [d,m]=await Promise.all([fetch('deals.json').then(r=>r.json()),fetch('meta.json').then(r=>r.json())]);
+    DEALS=d;META=m;
+  }catch(e){$('#loadingMsg').textContent='Could not load deals right now. Please refresh.';return;}
+  DEALS.forEach(x=>x._dl=daysLeft(x.vt));
+  $('#loadingMsg').style.display='none';
+  $('#updated').innerHTML='Updated '+fmtDate(META.generated_date)+'<br>'+DEALS.length.toLocaleString()+' deals · '+(META.num_stores||'')+' stores';
+  fill('#storeSel',META.stores||[...new Set(DEALS.map(x=>x.s))].sort());
+  fill('#deptSel',META.departments||[...new Set(DEALS.map(x=>x.d))].sort());
+  ['#q','#storeSel','#deptSel','#sortSel','#soonOnly'].forEach(s=>$(s).addEventListener('input',apply));
+  $('#openList').onclick=openD;$('#closeList').onclick=closeD;$('#overlay').onclick=closeD;
+  $('#loadMore').onclick=renderMore;
+  document.querySelectorAll('.groupToggle button').forEach(b=>b.onclick=()=>{groupBy=b.dataset.group;document.querySelectorAll('.groupToggle button').forEach(x=>x.classList.toggle('active',x===b));renderList();});
+  $('#clearList').onclick=()=>{if(Object.keys(sel).length&&confirm('Clear your whole list?')){sel={};saveSel();renderList();updCount();syncCards();}};
+  $('#copyList').onclick=copyList;$('#printList').onclick=()=>window.print();
+  updCount();apply();
+}
+function fill(s,arr){const el=$(s);arr.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});}
+function apply(){
+  const qraw=$('#q').value.trim(),q=qraw.toLowerCase();
+  const store=$('#storeSel').value,dept=$('#deptSel').value,soon=$('#soonOnly').checked;
+  // Word-start matching so "tide" matches "Tide" but not "pepTIDE"; every token must hit.
+  const toks=q?q.split(/\s+/).filter(Boolean).map(t=>new RegExp('\\b'+t.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'i')):[];
+  filtered=DEALS.filter(d=>{
+    if(store&&d.s!==store)return false;
+    if(dept&&d.d!==dept)return false;
+    if(soon&&!(d._dl!=null&&d._dl>=0&&d._dl<=2))return false;
+    if(toks.length){const hay=d.i+' '+(d.b||'')+' '+d.s;if(!toks.every(re=>re.test(hay)))return false;}
+    return true;
+  });
+  // Dominant unit family across the current results (so we compare like-with-like).
+  const famCount={};let withU=0;
+  filtered.forEach(d=>{const u=parseUnit(d);if(u){famCount[u.fam]=(famCount[u.fam]||0)+1;withU++;}});
+  const dom=Object.keys(famCount).sort((a,b)=>famCount[b]-famCount[a])[0];
+  const comparable=withU>=3&&(withU/Math.max(filtered.length,1))>=0.3;
+  const sSel=$('#sortSel').value;
+  const narrowed=!!(qraw||dept);
+  let eff=sSel;
+  if(sSel==='auto')eff=(narrowed&&comparable)?'value':'price_asc';
+  const valueActive=eff==='value'&&!!dom;
+  filtered.sort((a,b)=>{
+    if(eff==='value'){
+      const ua=parseUnit(a),ub=parseUnit(b);
+      const ra=ua?(ua.fam===dom?0:1):2,rb=ub?(ub.fam===dom?0:1):2;
+      if(ra!==rb)return ra-rb;
+      if(ra===2)return a.p-b.p;
+      if(ra===1&&ua.fam!==ub.fam)return ua.fam.localeCompare(ub.fam);
+      return ua.up-ub.up;
+    }
+    if(eff==='price_desc')return b.p-a.p;
+    if(eff==='store')return a.s.localeCompare(b.s)||a.i.localeCompare(b.i);
+    if(eff==='dept')return a.d.localeCompare(b.d)||a.p-b.p;
+    if(eff==='soon')return (a._dl==null?999:a._dl)-(b._dl==null?999:b._dl);
+    return a.p-b.p;
+  });
+  shown=0;$('#grid').innerHTML='';
+  $('#noneMsg').style.display=filtered.length?'none':'block';
+  renderMore();
+  $('#count').textContent=filtered.length.toLocaleString()+' deals'+(valueActive?' · best value first':'');
+}
+function renderMore(){
+  const frag=document.createDocumentFragment(),end=Math.min(shown+PAGE,filtered.length);
+  for(let i=shown;i<end;i++)frag.appendChild(card(filtered[i]));
+  $('#grid').appendChild(frag);shown=end;
+  $('#loadMore').style.display=shown<filtered.length?'block':'none';
+}
+function card(d){
+  const el=document.createElement('div');el.className='card';el.dataset.k=keyOf(d);
+  const on=!!sel[keyOf(d)],soon=d._dl!=null&&d._dl>=0&&d._dl<=2,u=parseUnit(d);
+  el.innerHTML=`<div class="thumb">${d.img?`<img loading="lazy" src="${d.img}" alt="">`:`<span class="ph">${esc(d.s)}</span>`}</div>
+   <div class="cbody">
+     <span class="store">${esc(d.s)}</span>
+     <div class="iname">${esc(d.i)}</div>
+     ${d.b?`<div class="brandline">${esc(d.b)}</div>`:''}
+     <div class="price">${esc(d.pd)}</div>
+     ${u?`<div class="unit">${fmtUP(u)}</div>`:''}
+     <div class="tags"><span class="tag">${esc(d.d)}</span>${d.vt?`<span class="tag ${soon?'soon':''}">${daysTxt(d._dl)}</span>`:''}</div>
+     <button class="addbtn ${on?'added':''}">${on?'On list':'+ Add to list'}</button>
+   </div>`;
+  el.querySelector('.addbtn').onclick=e=>toggle(d,e.target);
+  return el;
+}
+function toggle(d,btn){
+  const k=keyOf(d);
+  if(sel[k])delete sel[k];
+  else sel[k]={s:d.s,i:d.i,b:d.b,p:d.p,pd:d.pd,d:d.d,vt:d.vt,done:false};
+  saveSel();
+  const on=!!sel[k];if(btn){btn.classList.toggle('added',on);btn.textContent=on?'On list':'+ Add to list';}
+  updCount();if($('#drawer').classList.contains('open'))renderList();
+}
+function syncCards(){document.querySelectorAll('.card').forEach(el=>{const on=!!sel[el.dataset.k],b=el.querySelector('.addbtn');b.classList.toggle('added',on);b.textContent=on?'On list':'+ Add to list';});}
+function updCount(){$('#listCount').textContent=Object.keys(sel).length;}
+function openD(){renderList();$('#drawer').classList.add('open');$('#overlay').classList.add('show');}
+function closeD(){$('#drawer').classList.remove('open');$('#overlay').classList.remove('show');}
+function groupData(){const g={};Object.entries(sel).forEach(([k,v])=>{const key=v[groupBy];(g[key]=g[key]||[]).push([k,v]);});return g;}
+function renderList(){
+  const body=$('#listBody');
+  if(!Object.keys(sel).length){body.innerHTML='<div class="empty">Your list is empty.<br>Tap "+ Add to list" on any deal.</div>';$('#listTotal').textContent='$0.00';return;}
+  const g=groupData(),keys=Object.keys(g).sort();let html='',total=0;
+  keys.forEach(gk=>{
+    const rows=g[gk].sort((a,b)=>a[1].i.localeCompare(b[1].i));let sub=0;rows.forEach(([k,v])=>sub+=(v.p||0));
+    html+=`<div class="groupHdr"><span>${esc(gk)}</span><span>$${sub.toFixed(2)}</span></div>`;
+    rows.forEach(([k,v])=>{total+=(v.p||0);
+      html+=`<div class="li ${v.done?'done':''}" data-k="${encodeURIComponent(k)}">
+        <input type="checkbox" ${v.done?'checked':''} class="ck">
+        <div class="info"><div class="nm">${esc(v.i)}</div>
+        <div class="meta">${esc(v.pd)}${groupBy==='s'?' · '+esc(v.d):' · '+esc(v.s)}</div></div>
+        <button class="rm" title="Remove">&times;</button></div>`;
+    });
+  });
+  body.innerHTML=html;$('#listTotal').textContent='$'+total.toFixed(2);
+  body.querySelectorAll('.li').forEach(li=>{const k=decodeURIComponent(li.dataset.k);
+    li.querySelector('.ck').onchange=e=>{sel[k].done=e.target.checked;saveSel();li.classList.toggle('done',e.target.checked);};
+    li.querySelector('.rm').onclick=()=>{delete sel[k];saveSel();renderList();updCount();syncCards();};
+  });
+}
+function copyList(){
+  const g=groupData(),keys=Object.keys(g).sort();let t='LANCASTER DEALS - MY LIST ('+(META.generated_date||'')+')\n';
+  keys.forEach(gk=>{t+='\n'+gk.toUpperCase()+'\n';g[gk].sort((a,b)=>a[1].i.localeCompare(b[1].i)).forEach(([k,v])=>{t+='  [ ] '+v.i+' - '+v.pd+'\n';});});
+  navigator.clipboard.writeText(t).then(()=>{const b=$('#copyList');b.textContent='Copied';setTimeout(()=>b.textContent='Copy',1400);});
+}
+init();
+</script>
+</body>
+</html>
