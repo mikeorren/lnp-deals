@@ -179,13 +179,13 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
         <div class="fld"><label>Department</label><select id="f_dept"></select></div>
       </div>
       <div class="row2">
-        <div class="fld"><label>Valid through</label><input id="f_valid" type="date"/></div>
+        <div class="fld"><label>Valid through (max 1 week)</label><input id="f_valid" type="date"/></div>
         <div class="fld"><label>Image URL (optional)</label><input id="f_img" placeholder="https://…"/></div>
       </div>
       <label class="chk"><input type="checkbox" id="f_coupon"/> This is a digital coupon</label>
       <div class="fld" id="codeWrap" style="display:none"><label>Coupon code</label><input id="f_code" placeholder="e.g. LANC5"/></div>
       <button class="paybtn" id="toPay">Continue to payment — $50</button>
-      <div class="muted">Paid deals appear at the top of the site with a “Sponsored” label and expire on your “valid through” date.</div>
+      <div class="muted">Paid deals appear at the top of the site with a “Sponsored” label and run for up to 7 days (they expire on your “valid through” date, capped at one week).</div>
     </div>
     <div class="mb" id="stagePay" style="display:none">
       <div class="demotag">Demo checkout — no card is charged.</div>
@@ -243,12 +243,15 @@ function parseUnit(d){
 }
 function fmtUP(u){const v=u.up;const s=v>=0.1?v.toFixed(2):v.toFixed(3);return '$'+s+u.label;}
 
+const RUN_DAYS=7;
+function toISO(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function capVt(x){let postMs=(typeof x.ts==='number')?x.ts:(x.posted?Date.parse(x.posted+'T00:00:00'):Date.now());if(isNaN(postMs))postMs=Date.now();const capISO=toISO(postMs+RUN_DAYS*86400000);let vt=x.vt||capISO;if(vt>capISO)vt=capISO;return vt;}
 async function loadSubmitted(){
   let seeds=[];
   try{const r=await fetch('submitted-deals.json',{cache:'no-store'});if(r.ok)seeds=await r.json();}catch(e){}
   let subs=[];try{subs=JSON.parse(localStorage.getItem(SUBS))||[];}catch(e){}
   SUBMITTED=(Array.isArray(seeds)?seeds:[]).concat(Array.isArray(subs)?subs:[])
-    .map(x=>Object.assign({},x,{sp:1,p:(typeof x.p==='number'?x.p:parsePrice(x.pd)),_dl:daysLeft(x.vt)}))
+    .map(x=>{const vt=capVt(x);return Object.assign({},x,{sp:1,vt:vt,p:(typeof x.p==='number'?x.p:parsePrice(x.pd)),_dl:daysLeft(vt)});})
     .filter(x=>x._dl==null||x._dl>=0);
 }
 function saveSub(d){let subs=[];try{subs=JSON.parse(localStorage.getItem(SUBS))||[];}catch(e){}subs.push(d);localStorage.setItem(SUBS,JSON.stringify(subs));}
@@ -400,7 +403,9 @@ function copyList(){
 }
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
 function openSubmit(){
-  $('#f_store').value='';$('#f_item').value='';$('#f_price').value='';$('#f_valid').value='';$('#f_img').value='';$('#f_code').value='';
+  $('#f_store').value='';$('#f_item').value='';$('#f_price').value='';$('#f_img').value='';$('#f_code').value='';
+  const today=toISO(Date.now()),wk=toISO(Date.now()+RUN_DAYS*86400000);
+  const fv=$('#f_valid');fv.min=today;fv.max=wk;fv.value=wk;
   $('#f_coupon').checked=false;$('#codeWrap').style.display='none';
   $('#stagePay').style.display='none';$('#stageForm').style.display='flex';$('#modalTitle').textContent='Add your deal';
   $('#submitModal').classList.add('show');
@@ -412,9 +417,11 @@ function goPay(){
 }
 async function payNow(){
   const isCoupon=$('#f_coupon').checked;
+  const ts=Date.now();const capISO=toISO(ts+RUN_DAYS*86400000);
+  let vt=$('#f_valid').value||capISO;if(vt>capISO)vt=capISO;
   const d={s:$('#f_store').value.trim(),i:$('#f_item').value.trim(),b:'',pd:$('#f_price').value.trim(),
-    p:parsePrice($('#f_price').value),d:$('#f_dept').value||'General Merchandise',vt:$('#f_valid').value||null,
-    img:$('#f_img').value.trim(),sp:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'' ,ts:Date.now()};
+    p:parsePrice($('#f_price').value),d:$('#f_dept').value||'General Merchandise',vt:vt,
+    img:$('#f_img').value.trim(),sp:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'' ,ts:ts};
   saveSub(d);
   await loadSubmitted();
   closeSubmit();
