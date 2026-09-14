@@ -94,6 +94,8 @@ main{max-width:1220px;margin:16px auto;padding:0 18px}
 .fld input,.fld select{padding:9px 11px;border:1px solid #cfc9c4;border-radius:8px;font-size:14px;font-family:inherit;color:var(--ink)}
 .row2{display:flex;gap:10px}.row2>*{flex:1}
 .muted{font-size:12px;color:var(--muted)}
+.storelink{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+.storelink:hover{color:var(--green)}
 .paybtn{background:var(--green);color:#fff;border:none;border-radius:9px;padding:12px;font-family:Oswald;text-transform:uppercase;font-size:16px;font-weight:600;cursor:pointer}
 .linkbtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;text-decoration:underline;padding:4px}
 .demotag{background:#fff4ec;color:var(--accent);border:1px dashed var(--accent);border-radius:8px;padding:8px 10px;font-size:12px;text-align:center;font-weight:600}
@@ -158,7 +160,7 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
     <button data-group="s" class="active">By Store</button>
     <button data-group="d">By Department</button>
   </div>
-  <div class="hint">Check items off as you shop. Your list is saved on this device.</div>
+  <div class="hint">Check items off as you shop. Tap a store to see all its deals. Your list is saved on this device.</div>
   <div class="dbody" id="listBody"></div>
   <div class="dfoot">
     <span class="total" id="listTotal">$0.00</span>
@@ -178,7 +180,7 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
       <div class="fld"><label>Deal or item</label><input id="f_item" placeholder="e.g. $5 off any $25 order"/></div>
       <div class="row2">
         <div class="fld"><label>Price / offer</label><input id="f_price" placeholder="e.g. $4.99 or BOGO"/></div>
-        <div class="fld"><label>Department</label><select id="f_dept"></select></div>
+        <div class="fld"><label>Department</label><input id="f_dept" list="deptlist" placeholder="Pick or type a category"/><datalist id="deptlist"></datalist></div>
       </div>
       <div class="row2">
         <div class="fld"><label>Valid through (max 1 week)</label><input id="f_valid" type="date"/></div>
@@ -269,8 +271,7 @@ async function init(){
   $('#loadingMsg').style.display='none';
   $('#updated').innerHTML='Updated '+fmtDate(META.generated_date)+'<br>'+DEALS.length.toLocaleString()+' deals · '+(META.num_stores||'')+' stores';
   refreshStores();
-  fill('#deptSel',META.departments||[...new Set(DEALS.map(x=>x.d))].sort());
-  fill('#f_dept',META.departments||[]);
+  refreshDepts();
   ['#q','#storeSel','#deptSel','#sortSel','#soonOnly'].forEach(s=>$(s).addEventListener('input',apply));
   $('#openList').onclick=openD;$('#closeList').onclick=closeD;$('#overlay').onclick=closeD;
   $('#loadMore').onclick=renderMore;
@@ -286,6 +287,7 @@ async function init(){
 }
 function fill(s,arr){const el=$(s);(arr||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});}
 function refreshStores(){var cur=$('#storeSel').value;var set=new Set(META.stores||[...new Set(DEALS.map(x=>x.s))]);SUBMITTED.forEach(d=>{if(d.s)set.add(d.s);});var arr=[...set].sort((a,b)=>a.localeCompare(b));var el=$('#storeSel');el.innerHTML='<option value="">All stores</option>';arr.forEach(v=>{var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});if(cur&&arr.indexOf(cur)>=0)el.value=cur;}
+function refreshDepts(){var set=new Set(META.departments||[...new Set(DEALS.map(x=>x.d))]);SUBMITTED.forEach(d=>{if(d.d)set.add(d.d);});var arr=[...set].sort((a,b)=>a.localeCompare(b));var cur=$('#deptSel').value;var sel=$('#deptSel');sel.innerHTML='<option value="">All departments</option>';arr.forEach(v=>{var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});if(cur&&arr.indexOf(cur)>=0)sel.value=cur;var dl=$('#deptlist');if(dl){dl.innerHTML='';arr.forEach(v=>{var o=document.createElement('option');o.value=v;dl.appendChild(o);});}}
 function passes(d,store,dept,soon,toks){
   if(d._dl!=null&&d._dl<0)return false;
   if(store&&d.s!==store)return false;
@@ -383,7 +385,8 @@ function renderList(){
   const g=groupData(),keys=Object.keys(g).sort();let total=0;
   keys.forEach(gk=>{
     const rows=g[gk].sort((a,b)=>a[1].i.localeCompare(b[1].i));let sub=0;rows.forEach(([k,v])=>sub+=(v.p||0));
-    html+=`<div class="groupHdr"><span>${esc(gk)}</span><span>$${sub.toFixed(2)}</span></div>`;
+    const gkH=groupBy==='s'?`<span class="storelink" data-store="${encodeURIComponent(gk)}" title="See all ${esc(gk)} deals">${esc(gk)}</span>`:`<span>${esc(gk)}</span>`;
+    html+=`<div class="groupHdr">${gkH}<span>$${sub.toFixed(2)}</span></div>`;
     rows.forEach(([k,v])=>{total+=(v.p||0);
       html+=`<div class="li ${v.done?'done':''}" data-k="${encodeURIComponent(k)}">
         <input type="checkbox" ${v.done?'checked':''} class="ck">
@@ -397,6 +400,7 @@ function renderList(){
     li.querySelector('.ck').onchange=e=>{sel[k].done=e.target.checked;saveSel();li.classList.toggle('done',e.target.checked);};
     li.querySelector('.rm').onclick=()=>{delete sel[k];saveSel();renderList();updCount();syncCards();};
   });
+  body.querySelectorAll('.storelink').forEach(el=>{el.onclick=()=>{var s=decodeURIComponent(el.dataset.store);$('#q').value='';$('#deptSel').value='';$('#soonOnly').checked=false;$('#storeSel').value=s;closeD();apply();};});
 }
 function copyList(){
   let t='LANCASTER DEALS - MY LIST ('+(META.generated_date||'')+')\n';
@@ -408,7 +412,7 @@ function copyList(){
 }
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
 function openSubmit(){
-  $('#f_store').value='';$('#f_item').value='';$('#f_price').value='';$('#f_img').value='';$('#f_code').value='';
+  $('#f_store').value='';$('#f_item').value='';$('#f_price').value='';$('#f_img').value='';$('#f_code').value='';$('#f_dept').value='';
   const today=toISO(Date.now()),wk=toISO(Date.now()+RUN_DAYS*86400000);
   const fv=$('#f_valid');fv.min=today;fv.max=wk;fv.value=wk;
   $('#f_coupon').checked=false;$('#codeWrap').style.display='none';
@@ -429,11 +433,12 @@ async function freePost(){
   const ts=Date.now();const capISO=toISO(ts+RUN_DAYS*86400000);
   let vt=$('#f_valid').value||capISO;if(vt>capISO)vt=capISO;
   const d={s:$('#f_store').value.trim(),i:$('#f_item').value.trim(),b:'',pd:$('#f_price').value.trim(),
-    p:parsePrice($('#f_price').value),d:$('#f_dept').value||'General Merchandise',vt:vt,
+    p:parsePrice($('#f_price').value),d:($('#f_dept').value.trim()||'General Merchandise'),vt:vt,
     img:$('#f_img').value.trim(),sp:1,adv:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'',ts:ts};
   saveSub(d);
   await loadSubmitted();
   refreshStores();
+  refreshDepts();
   closeSubmit();
   apply();
   toast('Your LNP advertiser deal is live — pinned to the top.');
@@ -443,11 +448,12 @@ async function payNow(){
   const ts=Date.now();const capISO=toISO(ts+RUN_DAYS*86400000);
   let vt=$('#f_valid').value||capISO;if(vt>capISO)vt=capISO;
   const d={s:$('#f_store').value.trim(),i:$('#f_item').value.trim(),b:'',pd:$('#f_price').value.trim(),
-    p:parsePrice($('#f_price').value),d:$('#f_dept').value||'General Merchandise',vt:vt,
+    p:parsePrice($('#f_price').value),d:($('#f_dept').value.trim()||'General Merchandise'),vt:vt,
     img:$('#f_img').value.trim(),sp:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'' ,ts:ts};
   saveSub(d);
   await loadSubmitted();
   refreshStores();
+  refreshDepts();
   closeSubmit();
   apply();
   toast('Your deal is live — pinned to the top with a Sponsored badge.');
