@@ -172,6 +172,8 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
     <div class="mh"><h2 id="modalTitle">Add your deal</h2><button class="close" id="closeModal" title="Close">&times;</button></div>
     <div class="mb" id="stageForm">
       <div class="demotag">Proof of concept — this is a demo. No real payment is taken.</div>
+      <label class="chk"><input type="checkbox" id="f_adv"/> I'm a current LNP advertiser (post 1 deal free)</label>
+      <div class="muted" id="advNote" style="display:none">Honor system: current LNP advertisers may keep one deal live at a time at no charge. Everyone else can promote a deal for $50.</div>
       <div class="fld"><label>Business / store name</label><input id="f_store" placeholder="e.g. Prince Street Café"/></div>
       <div class="fld"><label>Deal or item</label><input id="f_item" placeholder="e.g. $5 off any $25 order"/></div>
       <div class="row2">
@@ -185,7 +187,7 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
       <label class="chk"><input type="checkbox" id="f_coupon"/> This is a digital coupon</label>
       <div class="fld" id="codeWrap" style="display:none"><label>Coupon code</label><input id="f_code" placeholder="e.g. LANC5"/></div>
       <button class="paybtn" id="toPay">Continue to payment — $50</button>
-      <div class="muted">Paid deals appear at the top of the site with a “Sponsored” label and run for up to 7 days (they expire on your “valid through” date, capped at one week).</div>
+      <div class="muted">Promoted deals appear at the top of the site with a label and run for up to 7 days (capped at one week). $50 per deal — or free for current LNP advertisers, who can keep one deal live at a time.</div>
     </div>
     <div class="mb" id="stagePay" style="display:none">
       <div class="demotag">Demo checkout — no card is charged.</div>
@@ -201,7 +203,7 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
 </div>
 <div class="toast" id="toast"></div>
 <footer>
-  <strong>Lancaster Deals</strong> is a project of Always Lancaster / LancasterOnline. Prices and offers are pulled from participating retailers' weekly circulars and are provided for convenience only &mdash; always confirm price, size, and dates in-store. Sponsored deals are paid placements. Per-unit prices are estimated from item sizes and shown only where a size could be read. Deals data via Flipp. Updated weekly on Wednesday mornings when new flyers post.
+  <strong>Lancaster Deals</strong> is a project of Always Lancaster / LancasterOnline. Prices and offers are pulled from participating retailers' weekly circulars and are provided for convenience only &mdash; always confirm price, size, and dates in-store. Promoted deals are placed by local businesses — $50, or free for current LNP advertisers. Per-unit prices are estimated from item sizes and shown only where a size could be read. Deals data via Flipp. Updated weekly on Wednesday mornings when new flyers post.
 </footer>
 <script>
 const LS='lancasterDeals_v1', SUBS='lancasterDeals_subs_v1';
@@ -266,7 +268,7 @@ async function init(){
   await loadSubmitted();
   $('#loadingMsg').style.display='none';
   $('#updated').innerHTML='Updated '+fmtDate(META.generated_date)+'<br>'+DEALS.length.toLocaleString()+' deals · '+(META.num_stores||'')+' stores';
-  fill('#storeSel',META.stores||[...new Set(DEALS.map(x=>x.s))].sort());
+  refreshStores();
   fill('#deptSel',META.departments||[...new Set(DEALS.map(x=>x.d))].sort());
   fill('#f_dept',META.departments||[]);
   ['#q','#storeSel','#deptSel','#sortSel','#soonOnly'].forEach(s=>$(s).addEventListener('input',apply));
@@ -277,12 +279,15 @@ async function init(){
   $('#copyList').onclick=copyList;$('#printList').onclick=()=>window.print();
   $('#addDealBtn').onclick=openSubmit;$('#closeModal').onclick=closeSubmit;
   $('#f_coupon').onchange=e=>$('#codeWrap').style.display=e.target.checked?'flex':'none';
+  $('#f_adv').onchange=e=>{const on=e.target.checked;$('#advNote').style.display=on?'block':'none';$('#toPay').textContent=on?'Post my deal (free)':'Continue to payment — $50';};
   $('#toPay').onclick=goPay;$('#backForm').onclick=()=>{$('#stagePay').style.display='none';$('#stageForm').style.display='flex';$('#modalTitle').textContent='Add your deal';};
   $('#payNow').onclick=payNow;
   updCount();apply();
 }
 function fill(s,arr){const el=$(s);(arr||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});}
+function refreshStores(){var cur=$('#storeSel').value;var set=new Set(META.stores||[...new Set(DEALS.map(x=>x.s))]);SUBMITTED.forEach(d=>{if(d.s)set.add(d.s);});var arr=[...set].sort((a,b)=>a.localeCompare(b));var el=$('#storeSel');el.innerHTML='<option value="">All stores</option>';arr.forEach(v=>{var o=document.createElement('option');o.value=v;o.textContent=v;el.appendChild(o);});if(cur&&arr.indexOf(cur)>=0)el.value=cur;}
 function passes(d,store,dept,soon,toks){
+  if(d._dl!=null&&d._dl<0)return false;
   if(store&&d.s!==store)return false;
   if(dept&&d.d!==dept)return false;
   if(soon&&!(d._dl!=null&&d._dl>=0&&d._dl<=2))return false;
@@ -334,7 +339,7 @@ function card(d){
   const on=!!sel[keyOf(d)],soon=d._dl!=null&&d._dl>=0&&d._dl<=2,u=parseUnit(d);
   el.innerHTML=`<div class="thumb">${d.img?`<img loading="lazy" src="${d.img}" alt="">`:`<span class="ph">${esc(d.s)}</span>`}</div>
    <div class="cbody">
-     ${d.sp?`<span class="badge-sp">Sponsored</span>`:''}
+     ${d.sp?`<span class="badge-sp">${d.adv?'LNP Advertiser':'Sponsored'}</span>`:''}
      <span class="store">${esc(d.s)}</span>
      <div class="iname">${esc(d.i)}</div>
      ${d.b?`<div class="brandline">${esc(d.b)}</div>`:''}
@@ -407,13 +412,31 @@ function openSubmit(){
   const today=toISO(Date.now()),wk=toISO(Date.now()+RUN_DAYS*86400000);
   const fv=$('#f_valid');fv.min=today;fv.max=wk;fv.value=wk;
   $('#f_coupon').checked=false;$('#codeWrap').style.display='none';
+  $('#f_adv').checked=false;$('#advNote').style.display='none';$('#toPay').textContent='Continue to payment — $50';
   $('#stagePay').style.display='none';$('#stageForm').style.display='flex';$('#modalTitle').textContent='Add your deal';
   $('#submitModal').classList.add('show');
 }
 function closeSubmit(){$('#submitModal').classList.remove('show');}
+function activeAdvCount(){let subs=[];try{subs=JSON.parse(localStorage.getItem(SUBS))||[];}catch(e){}return subs.filter(x=>x&&x.adv&&daysLeft(capVt(x))>=0).length;}
 function goPay(){
   if(!$('#f_store').value.trim()||!$('#f_item').value.trim()||!$('#f_price').value.trim()){toast('Please add a business, a deal, and a price.');return;}
+  if($('#f_adv').checked){freePost();return;}
   $('#stageForm').style.display='none';$('#stagePay').style.display='flex';$('#modalTitle').textContent='Checkout — $50';
+}
+async function freePost(){
+  if(activeAdvCount()>=1){toast('You already have a free LNP advertiser deal live — you can post another once it ends.');return;}
+  const isCoupon=$('#f_coupon').checked;
+  const ts=Date.now();const capISO=toISO(ts+RUN_DAYS*86400000);
+  let vt=$('#f_valid').value||capISO;if(vt>capISO)vt=capISO;
+  const d={s:$('#f_store').value.trim(),i:$('#f_item').value.trim(),b:'',pd:$('#f_price').value.trim(),
+    p:parsePrice($('#f_price').value),d:$('#f_dept').value||'General Merchandise',vt:vt,
+    img:$('#f_img').value.trim(),sp:1,adv:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'',ts:ts};
+  saveSub(d);
+  await loadSubmitted();
+  refreshStores();
+  closeSubmit();
+  apply();
+  toast('Your LNP advertiser deal is live — pinned to the top.');
 }
 async function payNow(){
   const isCoupon=$('#f_coupon').checked;
@@ -424,6 +447,7 @@ async function payNow(){
     img:$('#f_img').value.trim(),sp:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'' ,ts:ts};
   saveSub(d);
   await loadSubmitted();
+  refreshStores();
   closeSubmit();
   apply();
   toast('Your deal is live — pinned to the top with a Sponsored badge.');
