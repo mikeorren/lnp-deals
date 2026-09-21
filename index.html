@@ -96,6 +96,13 @@ main{max-width:1220px;margin:16px auto;padding:0 18px}
 .muted{font-size:12px;color:var(--muted)}
 .storelink{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 .storelink:hover{color:var(--green)}
+.lbt{width:100%;border-collapse:collapse;margin:6px 0 10px;font-size:13px}
+.lbt th{text-align:left;font-family:Oswald;text-transform:uppercase;font-size:11px;color:var(--muted);border-bottom:1px solid var(--line);padding:4px 6px}
+.lbt td{padding:5px 6px;border-bottom:1px solid var(--line)}
+.lbt td:first-child{color:var(--muted);width:22px}
+.lbt th:nth-child(3),.lbt td:nth-child(3),.lbt th:last-child,.lbt td:last-child{text-align:right}
+.lbt td:nth-child(3){font-family:Oswald;color:var(--green-d)}
+.lbh{margin:14px 0 2px;font-size:16px;color:var(--green-d);text-transform:uppercase;font-family:Oswald}
 .paybtn{background:var(--green);color:#fff;border:none;border-radius:9px;padding:12px;font-family:Oswald;text-transform:uppercase;font-size:16px;font-weight:600;cursor:pointer}
 .linkbtn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:13px;text-decoration:underline;padding:4px}
 .demotag{background:#fff4ec;color:var(--accent);border:1px dashed var(--accent);border-radius:8px;padding:8px 10px;font-size:12px;text-align:center;font-weight:600}
@@ -122,6 +129,7 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
     </div>
     <div class="spacer"></div>
     <div class="updated" id="updated"></div>
+    <button class="addbtn2" id="lbBtn">Best Prices</button>
     <button class="addbtn2" id="addDealBtn">+ Add your deal ($50)</button>
     <button class="listbtn" id="openList">My List <span class="badge" id="listCount">0</span></button>
   </div>
@@ -203,6 +211,12 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
     </div>
   </div>
 </div>
+<div class="modal" id="lbModal">
+  <div class="sheet">
+    <div class="mh"><h2>Value Leaderboard</h2><button class="close" id="lbClose" title="Close">&times;</button></div>
+    <div class="mb" id="lbBody"></div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 <footer>
   <strong>Lancaster Deals</strong> is a project of Always Lancaster / LancasterOnline. Prices and offers are pulled from participating retailers' weekly circulars and are provided for convenience only &mdash; always confirm price, size, and dates in-store. Promoted deals are placed by local businesses — $50, or free for current LNP advertisers. Per-unit prices are estimated from item sizes and shown only where a size could be read. Deals data via Flipp. Updated weekly on Wednesday mornings when new flyers post.
@@ -279,6 +293,7 @@ async function init(){
   $('#clearList').onclick=()=>{if(Object.keys(sel).length&&confirm('Clear your whole list?')){sel={};saveSel();renderList();updCount();syncCards();}};
   $('#copyList').onclick=copyList;$('#printList').onclick=()=>window.print();
   $('#addDealBtn').onclick=openSubmit;$('#closeModal').onclick=closeSubmit;
+  $('#lbBtn').onclick=openLeaderboard;$('#lbClose').onclick=function(){$('#lbModal').classList.remove('show');};
   $('#f_coupon').onchange=e=>$('#codeWrap').style.display=e.target.checked?'flex':'none';
   $('#f_adv').onchange=e=>{const on=e.target.checked;$('#advNote').style.display=on?'block':'none';$('#toPay').textContent=on?'Post my deal (free)':'Continue to payment — $50';};
   $('#toPay').onclick=goPay;$('#backForm').onclick=()=>{$('#stagePay').style.display='none';$('#stageForm').style.display='flex';$('#modalTitle').textContent='Add your deal';};
@@ -457,6 +472,44 @@ async function payNow(){
   closeSubmit();
   apply();
   toast('Your deal is live — pinned to the top with a Sponsored badge.');
+}
+/* ---- Value Leaderboard: auto-computed from the weekly flyer feed (DEALS only; sponsored excluded) ---- */
+function _lbPrice(pd,p){var s=String(pd||'');var m=s.match(/(\d+)\s*(?:\/|for)\s*\$?\s*(\d+(?:\.\d+)?)/i);if(m){var n=+m[1],t=+m[2];if(n>0)return t/n;}m=s.match(/\$\s*(\d+(?:\.\d+)?)/);if(m)return +m[1];m=s.match(/(\d+(?:\.\d+)?)\s*(?:¢|cents?)/i);if(m)return (+m[1])/100;return (typeof p==='number'?p:0);}
+function _lbClean(pd,p){if(/off|%|bogo|free|save|buy /.test(String(pd||'').toLowerCase()))return null;var v=_lbPrice(pd,p);if(!v||v<=0||v>500)return null;return v;}
+function _lbNorm(n){var s=String(n||'').toLowerCase().replace(/[®™]/g,' ');s=s.replace(/\d+(\.\d+)?\s*(fl\.?\s*oz|oz|ounces?|lbs?|lb|pounds?|kg|ml|ct|count|pk|pack|pods?|rolls?|sheets?|bars?|cans?|bottles?|boxes?|pieces?|pcs?|gal|gallons?|qt|pt|liters?|litres?|g)\b/g,' ');return s.replace(/[^a-z0-9 ]/g,' ').replace(/\b\d+\b/g,' ').replace(/\s+/g,' ').trim();}
+function _lbMed(a){if(!a.length)return 0;var b=a.slice().sort(function(x,y){return x-y});var i=Math.floor(b.length/2);return b.length%2?b[i]:(b[i-1]+b[i])/2;}
+function _lbMean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:0;}
+function computeLeaderboard(){
+  var rows=[];DEALS.forEach(function(d){var v=_lbClean(d.pd,d.p);if(v==null)return;var nm=_lbNorm(d.i);if(nm.length<3)return;rows.push({s:d.s,d:d.d,nm:nm,p:v});});
+  var depts={};rows.forEach(function(r){(depts[r.d]=depts[r.d]||[]).push(r.p);});
+  var dmed={};for(var k in depts)dmed[k]=_lbMed(depts[k]);
+  var sIdx={};rows.forEach(function(r){var m=dmed[r.d];if(m>0){sIdx[r.s]=sIdx[r.s]||{};(sIdx[r.s][r.d]=sIdx[r.s][r.d]||[]).push(r.p/m);}});
+  var index=[];for(var s in sIdx){var dm=[],tot=0,o=sIdx[s];for(var dd in o){tot+=o[dd].length;if(o[dd].length>=5)dm.push(_lbMed(o[dd]));}if(dm.length>=3&&tot>=30)index.push({s:s,n:tot,idx:_lbMean(dm)});}
+  index.sort(function(a,b){return a.idx-b.idx;});
+  var groups={};rows.forEach(function(r){var g=groups[r.nm]=groups[r.nm]||{};(g[r.s]=g[r.s]||[]).push(r.p);});
+  var appc={},winc={},coop={};
+  for(var nm in groups){var sd=groups[nm];var ss=Object.keys(sd);if(ss.length<2)continue;var smin={},lo=Infinity,hi=-Infinity;ss.forEach(function(x){var mn=Math.min.apply(null,sd[x]);smin[x]=mn;if(mn<lo)lo=mn;if(mn>hi)hi=mn;});var cheap=ss.filter(function(x){return Math.abs(smin[x]-lo)<1e-9;}).sort();for(var i=0;i<cheap.length;i++)for(var j=i+1;j<cheap.length;j++){var kp=cheap[i]+' & '+cheap[j];coop[kp]=(coop[kp]||0)+1;}if(hi<=lo)continue;ss.forEach(function(x){appc[x]=(appc[x]||0)+1;if(smin[x]<=lo*1.001)winc[x]=(winc[x]||0)+1;});}
+  var h2h=[];for(var s2 in appc){if(appc[s2]>=15)h2h.push({s:s2,n:appc[s2],win:(winc[s2]||0)/appc[s2]});}
+  h2h.sort(function(a,b){return b.win-a.win;});
+  var coopArr=[];for(var c in coop){if(coop[c]>=25)coopArr.push({pair:c,n:coop[c]});}coopArr.sort(function(a,b){return b.n-a.n;});
+  return {index:index,h2h:h2h,coop:coopArr,gen:(META&&META.generated_date)||''};
+}
+function openLeaderboard(){
+  var L=computeLeaderboard();
+  var h='<div class="muted" style="margin-bottom:6px">Auto-computed from this week\'s advertised flyer prices'+(L.gen?' (updated '+esc(fmtDate(L.gen))+')':'')+'. Advertised deals, not shelf prices.</div>';
+  h+='<h3 class="lbh">Best all-around value</h3><div class="muted">Each store\'s prices vs. the typical price in every category it advertises, averaged (1.00 = typical; lower = cheaper).</div>';
+  h+='<table class="lbt"><tr><th>#</th><th>Store</th><th>Index</th><th>Deals</th></tr>';
+  if(!L.index.length)h+='<tr><td colspan="4" class="muted">Not enough data this week.</td></tr>';
+  L.index.slice(0,10).forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.s)+'</td><td>'+r.idx.toFixed(2)+'</td><td>'+r.n+'</td></tr>';});
+  h+='</table>';
+  h+='<h3 class="lbh">Head-to-head winners</h3><div class="muted">When stores advertise the same item at different prices, how often each is the cheapest.</div>';
+  h+='<table class="lbt"><tr><th>#</th><th>Store</th><th>Cheapest</th><th>Items</th></tr>';
+  if(!L.h2h.length)h+='<tr><td colspan="4" class="muted">Not enough overlapping items this week.</td></tr>';
+  L.h2h.slice(0,10).forEach(function(r,i){h+='<tr><td>'+(i+1)+'</td><td>'+esc(r.s)+'</td><td>'+Math.round(r.win*100)+'%</td><td>'+r.n+'</td></tr>';});
+  h+='</table>';
+  if(L.coop.length)h+='<div class="muted" style="margin-top:6px"><strong>Note:</strong> these pairs run identical flyers, so they tie rather than compete &mdash; '+L.coop.slice(0,3).map(function(c){return esc(c.pair);}).join('; ')+'.</div>';
+  h+='<div class="muted" style="margin-top:8px">One week of flyers, ZIP 17603. Percent-off/BOGO excluded; multi-buys normalized to per-unit. A guide to who advertises the best prices &mdash; always confirm in-store.</div>';
+  $('#lbBody').innerHTML=h;$('#lbModal').classList.add('show');
 }
 init();
 </script>
