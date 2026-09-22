@@ -192,7 +192,7 @@ footer{max-width:1220px;margin:26px auto;padding:14px 18px 40px;color:var(--mute
       </div>
       <div class="row2">
         <div class="fld"><label>Valid through (max 1 week)</label><input id="f_valid" type="date"/></div>
-        <div class="fld"><label>Image URL (optional)</label><input id="f_img" placeholder="https://…"/></div>
+        <div class="fld"><label>Photo (optional)</label><input id="f_photo" type="file" accept="image/*"/><input id="f_img" type="hidden"/><img id="f_preview" alt="" style="display:none;margin-top:6px;max-height:90px;border-radius:8px;border:1px solid var(--line)"/></div>
       </div>
       <label class="chk"><input type="checkbox" id="f_coupon"/> This is a digital coupon</label>
       <div class="fld" id="codeWrap" style="display:none"><label>Coupon code</label><input id="f_code" placeholder="e.g. LANC5"/></div>
@@ -260,6 +260,27 @@ function parseUnit(d){
   return d._u=null;
 }
 function fmtUP(u){const v=u.up;const s=v>=0.1?v.toFixed(2):v.toFixed(3);return '$'+s+u.label;}
+function handlePhoto(file){
+  var pv=$('#f_preview');
+  if(!file){$('#f_img').value='';pv.style.display='none';return;}
+  if(!/^image\//.test(file.type||'')){toast('Please choose an image file.');return;}
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=new Image();
+    img.onload=function(){
+      var max=900,w=img.width,h=img.height;
+      if(w>max||h>max){if(w>=h){h=Math.round(h*max/w);w=max;}else{w=Math.round(w*max/h);h=max;}}
+      var c=document.createElement('canvas');c.width=w;c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      var data;try{data=c.toDataURL('image/jpeg',0.72);}catch(err){toast('Could not process that image.');return;}
+      $('#f_img').value=data;pv.src=data;pv.style.display='block';
+    };
+    img.onerror=function(){toast('Could not read that image. Try a JPG or PNG.');};
+    img.src=e.target.result;
+  };
+  reader.onerror=function(){toast('Could not read that file.');};
+  reader.readAsDataURL(file);
+}
 
 const RUN_DAYS=7;
 function toISO(ms){const d=new Date(ms);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -272,7 +293,7 @@ async function loadSubmitted(){
     .map(x=>{const vt=capVt(x);return Object.assign({},x,{sp:1,vt:vt,p:(typeof x.p==='number'?x.p:parsePrice(x.pd)),_dl:daysLeft(vt)});})
     .filter(x=>x._dl==null||x._dl>=0);
 }
-function saveSub(d){let subs=[];try{subs=JSON.parse(localStorage.getItem(SUBS))||[];}catch(e){}subs.push(d);localStorage.setItem(SUBS,JSON.stringify(subs));}
+function saveSub(d){var subs=[];try{subs=JSON.parse(localStorage.getItem(SUBS))||[];}catch(e){}subs.push(d);try{localStorage.setItem(SUBS,JSON.stringify(subs));return true;}catch(e){toast('Could not save — the photo may be too large. Try a smaller image.');return false;}}
 
 async function init(){
   loadSel();
@@ -296,6 +317,7 @@ async function init(){
   $('#lbBtn').onclick=openLeaderboard;$('#lbClose').onclick=function(){$('#lbModal').classList.remove('show');};
   $('#f_coupon').onchange=e=>$('#codeWrap').style.display=e.target.checked?'flex':'none';
   $('#f_adv').onchange=e=>{const on=e.target.checked;$('#advNote').style.display=on?'block':'none';$('#toPay').textContent=on?'Post my deal (free)':'Continue to payment — $50';};
+  $('#f_photo').onchange=e=>handlePhoto(e.target.files&&e.target.files[0]);
   $('#toPay').onclick=goPay;$('#backForm').onclick=()=>{$('#stagePay').style.display='none';$('#stageForm').style.display='flex';$('#modalTitle').textContent='Add your deal';};
   $('#payNow').onclick=payNow;
   updCount();apply();
@@ -427,7 +449,7 @@ function copyList(){
 }
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2600);}
 function openSubmit(){
-  $('#f_store').value='';$('#f_item').value='';$('#f_price').value='';$('#f_img').value='';$('#f_code').value='';$('#f_dept').value='';
+  $('#f_store').value='';$('#f_item').value='';$('#f_price').value='';$('#f_img').value='';$('#f_code').value='';$('#f_dept').value='';try{$('#f_photo').value='';}catch(e){}$('#f_preview').style.display='none';
   const today=toISO(Date.now()),wk=toISO(Date.now()+RUN_DAYS*86400000);
   const fv=$('#f_valid');fv.min=today;fv.max=wk;fv.value=wk;
   $('#f_coupon').checked=false;$('#codeWrap').style.display='none';
@@ -450,7 +472,7 @@ async function freePost(){
   const d={s:$('#f_store').value.trim(),i:$('#f_item').value.trim(),b:'',pd:$('#f_price').value.trim(),
     p:parsePrice($('#f_price').value),d:($('#f_dept').value.trim()||'General Merchandise'),vt:vt,
     img:$('#f_img').value.trim(),sp:1,adv:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'',ts:ts};
-  saveSub(d);
+  if(!saveSub(d))return;
   await loadSubmitted();
   refreshStores();
   refreshDepts();
@@ -465,7 +487,7 @@ async function payNow(){
   const d={s:$('#f_store').value.trim(),i:$('#f_item').value.trim(),b:'',pd:$('#f_price').value.trim(),
     p:parsePrice($('#f_price').value),d:($('#f_dept').value.trim()||'General Merchandise'),vt:vt,
     img:$('#f_img').value.trim(),sp:1,cp:isCoupon?1:0,code:isCoupon?$('#f_code').value.trim():'' ,ts:ts};
-  saveSub(d);
+  if(!saveSub(d))return;
   await loadSubmitted();
   refreshStores();
   refreshDepts();
